@@ -1,5 +1,19 @@
 pragma solidity ^0.4.17;
 
+contract CampaignFactory {
+    address[] public deployedCampaigns;
+    
+    function createCampaign(uint minimum) public {
+        address newCampaign = new Campaign(minimum, msg.sender);
+        deployedCampaigns.push(newCampaign);
+    }
+    
+    function getDeployedCampaigns() public view returns (address[]) {
+        return deployedCampaigns;
+    }
+}
+
+
 contract Campaign {
     struct Request {
         string description;
@@ -7,31 +21,32 @@ contract Campaign {
         address recipient;
         bool complete;
         uint approvalCount;
-        mapping(address => bool) voters;
+        mapping(address => bool) approvals;
     }
-    
+
+    Request[] public requests;
     address public manager;
     uint public minimumContribution;
     mapping(address => bool) public approvers;
-    Request[] public requests;
     uint public approversCount;
-    
+
     modifier restricted() {
         require(msg.sender == manager);
         _;
     }
-   
-    function Campaign(uint minimum) public {
-        manager = msg.sender;
+
+    function Campaign(uint minimum, address creator) public {
+        manager = creator;
         minimumContribution = minimum;
     }
-    
+
     function contribute() public payable {
         require(msg.value > minimumContribution);
+
         approvers[msg.sender] = true;
         approversCount++;
     }
-    
+
     function createRequest(string description, uint value, address recipient) public restricted {
         Request memory newRequest = Request({
            description: description,
@@ -40,27 +55,26 @@ contract Campaign {
            complete: false,
            approvalCount: 0
         });
-        
-        // a worse way of doing it: Request(description, value, recipient, false);
-        
+
         requests.push(newRequest);
     }
-    
-    function approveRequest(uint idx) public {
-        Request storage request = requests[idx];
-        
+
+    function approveRequest(uint index) public {
+        Request storage request = requests[index];
+
         require(approvers[msg.sender]);
-        require(!request.voters[msg.sender]);
+        require(!request.approvals[msg.sender]);
+
+        request.approvals[msg.sender] = true;
         request.approvalCount++;
-        request.voters[msg.sender] = true;
     }
-    
-    function finalizeRequest(uint idx) public restricted {
-        Request storage request = requests[idx];
-        
+
+    function finalizeRequest(uint index) public restricted {
+        Request storage request = requests[index];
+
+        require(request.approvalCount > (approversCount / 2));
         require(!request.complete);
-        require(request.approvalCount > (approversCount/2));
-        
+
         request.recipient.transfer(request.value);
         request.complete = true;
     }

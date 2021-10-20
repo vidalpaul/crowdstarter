@@ -6,23 +6,21 @@ contract Campaign {
         uint value;
         address recipient;
         bool complete;
+        uint approvalCount;
+        mapping(address => bool) voters;
     }
     
     address public manager;
     uint public minimumContribution;
-    address[] public approvers;
+    mapping(address => bool) public approvers;
     Request[] public requests;
+    uint public approversCount;
     
     modifier restricted() {
         require(msg.sender == manager);
         _;
     }
-    
-    // modifier contributor() {
-    //     require(msg.sender in approvers);
-    //     _;
-    // }
-    
+   
     function Campaign(uint minimum) public {
         manager = msg.sender;
         minimumContribution = minimum;
@@ -30,15 +28,17 @@ contract Campaign {
     
     function contribute() public payable {
         require(msg.value > minimumContribution);
-        approvers.push(msg.sender);
+        approvers[msg.sender] = true;
+        approversCount++;
     }
     
     function createRequest(string description, uint value, address recipient) public restricted {
-        Request newRequest = Request({
+        Request memory newRequest = Request({
            description: description,
            value: value,
            recipient: recipient,
-           complete: false
+           complete: false,
+           approvalCount: 0
         });
         
         // a worse way of doing it: Request(description, value, recipient, false);
@@ -46,9 +46,22 @@ contract Campaign {
         requests.push(newRequest);
     }
     
-    // function approveRequest() contributor {}
-    
-    function finalizeRequest() public restricted {
+    function approveRequest(uint idx) public {
+        Request storage request = requests[idx];
         
+        require(approvers[msg.sender]);
+        require(!request.voters[msg.sender]);
+        request.approvalCount++;
+        request.voters[msg.sender] = true;
+    }
+    
+    function finalizeRequest(uint idx) public restricted {
+        Request storage request = requests[idx];
+        
+        require(!request.complete);
+        require(request.approvalCount > (approversCount/2));
+        
+        request.recipient.transfer(request.value);
+        request.complete = true;
     }
 }

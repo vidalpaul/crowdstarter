@@ -26,7 +26,12 @@ beforeEach(async () => {
    campaign = await new web3.eth.Contract(
       JSON.parse(compiledCampaign.interface),
       campaignAddress
-   )
-      .deploy({ data: compiledCampaign.bytecode })
-      .send({ from: accounts[0], gas: '1000000', gasPrice: '5000000000' });
+   );
+});
+
+describe('Campaigns', () => {
+   it('deploys a factory and a campaign', () => {
+      assert.ok(factory.options.address);
+      assert.ok(campaign.options.address);
+   });
 });

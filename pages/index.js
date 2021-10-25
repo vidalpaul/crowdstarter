@@ -28,8 +28,13 @@ export default class CampaignIndex extends Component {
             <Layout>
                <div>
                   <h3>Open Campaigns</h3>
+                  <Button
+                     content='Create campaign'
+                     icon='add circle'
+                     primary
+                     floated='right'
+                  />
                   {this.renderCampaigns()}
-                  <Button content='Create campaign' icon='add circle' primary />
                </div>
             </Layout>
          </>
